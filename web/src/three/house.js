@@ -1,13 +1,61 @@
 // Turns the rooms + openings of a plan into floors, walls and windows.
 import * as THREE from 'three';
 import { box, mat, at, floorMesh } from './kit.js';
+import { SLAB } from '../config.js';
 
 const EXT_T = 0.2;   // exterior wall thickness
 const INT_T = 0.1;   // interior wall thickness
 const CURB = 0.14;   // height of the cut-away walls on the camera side
 const EPS = 1e-4;
+const NEAR = 0.15;   // how squarely an outer wall must face the camera to be cut away
+const NEAR_BAND = 0.05; // ...and how far past that before it changes its mind
+const WALL_TIME = 0.28; // seconds for a wall to sink or rise
+const STAIR_CLEARANCE = 0.06; // space between a flight and the edge of the floor opening
 
 const key = (v) => Math.round(v * 1000);
+
+// The rectangular openings made in this floor by stairs on the floor immediately below.
+function stairOpenings(config, level) {
+  const index = config.levels.findIndex((l) => l.id === level.id);
+  if (index < 1) return [];
+  const below = config.levels[index - 1].id;
+  return config.furniture.filter((f) => f.type === 'stairs' && f.level === below && Array.isArray(f.pos)).map((f) => {
+    const angle = THREE.MathUtils.degToRad(f.rot || 0);
+    const c = Math.abs(Math.cos(angle));
+    const s = Math.abs(Math.sin(angle));
+    const width = f.width || (f.style === 'double' ? 2.2 : 1);
+    const depth = f.depth || 2.8;
+    // An axis-aligned opening around a rotated flight is deliberately conservative: no
+    // corner of a stair can poke through the finish or the structural slab.
+    const w = width * c + depth * s + STAIR_CLEARANCE * 2;
+    const d = width * s + depth * c + STAIR_CLEARANCE * 2;
+    return { x: f.pos[0] - w / 2, z: f.pos[1] - d / 2, w, d };
+  });
+}
+
+/** Splits a room into non-overlapping rectangles after rectangular floor openings are removed. */
+export function floorRegions(room, openings) {
+  let regions = [{ x: room.x, z: room.z, w: room.w, d: room.d }];
+  for (const hole of openings) {
+    const next = [];
+    for (const r of regions) {
+      const x0 = Math.max(r.x, hole.x);
+      const z0 = Math.max(r.z, hole.z);
+      const x1 = Math.min(r.x + r.w, hole.x + hole.w);
+      const z1 = Math.min(r.z + r.d, hole.z + hole.d);
+      if (x1 - x0 <= EPS || z1 - z0 <= EPS) { next.push(r); continue; }
+
+      // Left and right span the full depth; the other two fill only the middle strip,
+      // keeping every result disjoint for clean shadows and picking.
+      if (x0 - r.x > EPS) next.push({ x: r.x, z: r.z, w: x0 - r.x, d: r.d });
+      if (r.x + r.w - x1 > EPS) next.push({ x: x1, z: r.z, w: r.x + r.w - x1, d: r.d });
+      if (z0 - r.z > EPS) next.push({ x: x0, z: r.z, w: x1 - x0, d: z0 - r.z });
+      if (r.z + r.d - z1 > EPS) next.push({ x: x0, z: z1, w: x1 - x0, d: r.z + r.d - z1 });
+    }
+    regions = next;
+  }
+  return regions;
+}
 
 // Splits every room edge into wall segments, classifying each as exterior / interior
 // and attaching the opening (door, window, ...) that covers it, if any.
@@ -64,24 +112,46 @@ function wallSegments(config) {
   return segments;
 }
 
-export function buildHouse(config, camDir) {
+// One floor of the home, standing on y = 0: `level` is one of config.levels. The lowest
+// stands on a plinth; a floor above it rests on a slab under each of its rooms.
+// The outer walls facing the camera sink to a curb so the rooms stay in view: `view()` says
+// where the camera is, `update()` moves the walls and reports when they have stopped.
+export function buildHouse(config, level = config.levels[0]) {
   const group = new THREE.Group();
   const floors = [];
-  const H = config.wallHeight;
+  const H = level.wallHeight;
   const Hi = Math.min(config.interiorWallHeight, H);
-  const { minX, minZ, maxX, maxZ } = config.bounds;
+  const rooms = config.rooms.filter((r) => r.level === level.id);
+  const openings = config.openings.filter((o) => o.level === level.id);
+  const floorOpenings = stairOpenings(config, level);
+  const { minX, minZ, maxX, maxZ } = level.bounds;
 
-  // Plinth the model stands on.
-  const plinth = box(maxX - minX + 0.7, 0.3, maxZ - minZ + 0.7, mat('#141927', { rough: 0.9 }), { r: 0.12 });
-  at(plinth, (minX + maxX) / 2, -0.305, (minZ + maxZ) / 2);
-  plinth.receiveShadow = true;
-  group.add(plinth);
+  if (level.elevation === 0) {
+    // Plinth the model stands on.
+    const plinth = box(maxX - minX + 0.7, 0.3, maxZ - minZ + 0.7, mat('#141927', { rough: 0.9 }), { r: 0.12 });
+    at(plinth, (minX + maxX) / 2, -0.305, (minZ + maxZ) / 2);
+    plinth.receiveShadow = true;
+    group.add(plinth);
+  } else {
+    const slab = mat('#1d2232', { rough: 0.9 });
+    for (const r of rooms) {
+      const expanded = { x: r.x - EXT_T / 2, z: r.z - EXT_T / 2, w: r.w + EXT_T, d: r.d + EXT_T };
+      for (const part of floorRegions(expanded, floorOpenings)) {
+        const s = box(part.w, SLAB - 0.01, part.d, slab, { r: 0 });
+        at(s, part.x + part.w / 2, -SLAB, part.z + part.d / 2);
+        s.receiveShadow = true;
+        group.add(s);
+      }
+    }
+  }
 
-  for (const room of config.rooms) {
-    const floor = floorMesh(room, room.floor);
-    floor.userData = { kind: 'room', id: room.id };
-    floors.push(floor);
-    group.add(floor);
+  for (const room of rooms) {
+    for (const part of floorRegions(room, floorOpenings)) {
+      const floor = floorMesh(part, room.floor);
+      floor.userData = { kind: 'room', id: room.id };
+      floors.push(floor);
+      group.add(floor);
+    }
   }
 
   const wallBody = mat('#e7e3db', { rough: 0.95 });
@@ -95,54 +165,105 @@ export function buildHouse(config, camDir) {
   const frame = mat('#2c3142', { rough: 0.6 });
 
   // A wall piece running from a..b along its axis, between heights y0..y1.
-  const piece = (s, a, b, y0, y1, t, materials = wallMats) => {
+  const piece = (s, a, b, y0, y1, t, materials = wallMats, parent = group) => {
     const len = b - a;
     const geo = s.axis === 'x' ? new THREE.BoxGeometry(len, y1 - y0, t) : new THREE.BoxGeometry(t, y1 - y0, len);
     const m = new THREE.Mesh(geo, materials);
     const mid = (a + b) / 2;
     m.position.set(s.axis === 'x' ? mid : s.c, (y0 + y1) / 2, s.axis === 'x' ? s.c : mid);
     m.castShadow = m.receiveShadow = true;
-    group.add(m);
+    parent.add(m);
     return m;
   };
 
-  for (const s of wallSegments(config)) {
+  // The four sides of the floor, each with its outer walls standing and cut away.
+  const sides = new Map();
+  const sideOf = (nx, nz) => {
+    const k = `${nx},${nz}`;
+    if (!sides.has(k)) {
+      const side = { nx, nz, tall: new THREE.Group(), curb: new THREE.Group(), near: null, up: 1 };
+      group.add(side.tall, side.curb);
+      sides.set(k, side);
+    }
+    return sides.get(k);
+  };
+
+  for (const s of wallSegments({ rooms, openings })) {
     const exterior = s.kind === 'exterior';
     const t = exterior ? EXT_T : INT_T;
-    // Outward normal of an exterior wall points away from its room.
-    const nx = s.axis === 'z' ? -s.inside : 0;
-    const nz = s.axis === 'x' ? -s.inside : 0;
-    const near = exterior && nx * camDir.x + nz * camDir.z > 0.15;
     const a = s.a - (s.freeA ? EXT_T / 2 : 0);
     const b = s.b + (s.freeB ? EXT_T / 2 : 0);
     const type = s.opening?.type;
+    let parent = group;
 
-    if (near) {
-      if (type !== 'door') piece(s, a, b, 0, CURB, t);
-      continue;
+    if (exterior) {
+      // Outward normal of an exterior wall points away from its room.
+      const side = sideOf(s.axis === 'z' ? -s.inside : 0, s.axis === 'x' ? -s.inside : 0);
+      if (type !== 'door') piece(s, a, b, 0, CURB, t, wallMats, side.curb);
+      parent = side.tall;
     }
     if (type === 'door' || type === 'open') continue;
 
     const height = exterior ? H : Hi;
     if (type === 'window' && exterior) {
       const { sill, head } = s.opening;
-      piece(s, a, b, 0, sill, t);
-      piece(s, a, b, Math.min(head, H), H, t);
-      const pane = piece(s, a, b, sill, head, 0.03, glass);
+      piece(s, a, b, 0, sill, t, wallMats, parent);
+      piece(s, a, b, Math.min(head, H), H, t, wallMats, parent);
+      const pane = piece(s, a, b, sill, head, 0.03, glass, parent);
       pane.castShadow = false;
       const fw = 0.05;
       const bars = [[a, a + fw, sill, head], [b - fw, b, sill, head], [a, b, sill, sill + fw], [a, b, head - fw, head]];
       if (b - a > 1.2) bars.push([(a + b) / 2 - fw / 2, (a + b) / 2 + fw / 2, sill, head]);
-      for (const [fa, fb, y0, y1] of bars) piece(s, fa, fb, y0, y1, 0.07, frame);
+      for (const [fa, fb, y0, y1] of bars) piece(s, fa, fb, y0, y1, 0.07, frame, parent);
       continue;
     }
     if (type === 'window') continue; // a window in an interior wall is just a gap
 
-    piece(s, a, b, 0, height, t);
+    piece(s, a, b, 0, height, t, wallMats, parent);
     // Interior walls are drawn cut low, but lamps should still be contained by the
     // real, full-height wall: an invisible shadow caster fills in the missing part.
     if (!exterior && Hi < H) piece(s, a, b, Hi, H, 0.04, blocker).receiveShadow = false;
   }
 
-  return { group, floors };
+  const low = CURB / H;
+  const pose = (side) => {
+    const sunk = side.up === 0;
+    side.curb.visible = sunk;
+    side.tall.visible = !sunk;
+    side.tall.scale.y = low + (1 - low) * side.up * side.up * (3 - 2 * side.up);
+  };
+
+  return {
+    group,
+    floors,
+    // The camera looks from (dx, dz), a horizontal unit vector. The first call sets the walls at once.
+    view(dx, dz) {
+      for (const side of sides.values()) {
+        const facing = side.nx * dx + side.nz * dz;
+        if (side.near === null) {
+          side.near = facing > NEAR;
+          side.up = side.near ? 0 : 1;
+          pose(side);
+        } else {
+          side.near = facing > NEAR + (side.near ? -NEAR_BAND : NEAR_BAND);
+        }
+      }
+    },
+    // Returns 'moving' while a wall is sinking or rising, 'stopped' on the frame the last one
+    // comes to rest (the shadows are out of date then), and null otherwise.
+    update(dt) {
+      let moving = false;
+      let stopped = false;
+      for (const side of sides.values()) {
+        const goal = side.near ? 0 : 1;
+        if (side.up === goal) continue;
+        const step = dt / WALL_TIME;
+        side.up = goal > side.up ? Math.min(goal, side.up + step) : Math.max(goal, side.up - step);
+        pose(side);
+        if (side.up === goal) stopped = true;
+        else moving = true;
+      }
+      return moving ? 'moving' : stopped ? 'stopped' : null;
+    },
+  };
 }

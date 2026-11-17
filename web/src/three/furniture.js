@@ -191,8 +191,7 @@ const builders = {
     );
   },
 
-  bed({ width = 1.6, color = '#7f8fb5' }) {
-    const depth = 2.1;
+  bed({ width = 1.6, depth = 2.1, color = '#7f8fb5' }) {
     const linen = mat('#f1efea', { rough: 1 });
     const g = group(
       at(box(width + 0.1, 0.26, depth + 0.04, mat(DARK_WOOD, { rough: 0.7 }), { r: 0.03 }), 0, 0.04, 0),
@@ -269,6 +268,33 @@ const builders = {
     );
   },
 
+  shower({ width = 0.9, depth = 0.9 }) {
+    const glass = mat('#b8def2', { rough: 0.08, metal: 0.05, opacity: 0.24 });
+    const chrome = mat(METAL, { rough: 0.18, metal: 0.95 });
+    const tray = mat(WHITE, { rough: 0.25 });
+    const frame = 0.018;
+    const glassHeight = 1.9;
+    const doorWidth = Math.min(0.56, width * 0.62);
+    const sideWidth = Math.max(0.08, (width - doorWidth) / 2);
+    const parts = [
+      at(box(width, 0.08, depth, tray, { r: 0.035 }), 0, 0, 0),
+      at(box(width - 0.08, 0.012, depth - 0.08, mat('#b9ddea', { rough: 0.2 }), { r: 0 }), 0, 0.082, 0),
+      at(cyl(0.035, 0.035, 0.012, chrome, 18), 0, 0.095, -depth * 0.3),
+      at(box(frame, glassHeight, depth, glass, { r: 0 }), -width / 2 + frame / 2, 0.08, 0),
+      at(box(frame, glassHeight, depth, glass, { r: 0 }), width / 2 - frame / 2, 0.08, 0),
+      at(box(sideWidth, glassHeight, frame, glass, { r: 0 }), -(doorWidth + sideWidth) / 2, 0.08, depth / 2 - frame / 2),
+      at(box(sideWidth, glassHeight, frame, glass, { r: 0 }), (doorWidth + sideWidth) / 2, 0.08, depth / 2 - frame / 2),
+      at(cyl(0.11, 0.09, 0.025, chrome, 24), 0, 1.93, 0),
+      at(box(0.025, 0.32, 0.025, chrome, { r: 0.008 }), doorWidth / 2 - 0.08, 0.88, depth / 2 + 0.006),
+    ];
+    for (const x of [-width / 2 + frame / 2, width / 2 - frame / 2]) {
+      for (const z of [-depth / 2 + frame / 2, depth / 2 - frame / 2]) {
+        parts.push(at(box(0.025, glassHeight + 0.04, 0.025, chrome, { r: 0.005 }), x, 0.08, z));
+      }
+    }
+    return group(parts);
+  },
+
   toilet() {
     const c = mat(WHITE, { rough: 0.25 });
     const bowl = at(cyl(0.19, 0.13, 0.4, c), 0, 0, 0.1);
@@ -320,6 +346,93 @@ const builders = {
     }
     return g;
   },
+
+  // A straight flight, or two parallel flights joined by a half-height landing.
+  stairs({ style = 'straight', width, depth = 2.8, height = 2.9, landingDepth = 0.85, direction = 'right' }) {
+    width ??= style === 'double' ? 2.2 : 1;
+    if (style === 'double') {
+      const g = new THREE.Group();
+      const body = mat('#d9d4cb', { rough: 0.9 });
+      const tread = mat(WOOD, { rough: 0.6 });
+      const rail = mat(BLACK, { rough: 0.5 });
+      const gap = Math.min(0.14, width * 0.08);
+      const flightWidth = Math.max(0.35, (width - gap) / 2);
+      const landing = Math.min(Math.max(0.45, landingDepth), depth * 0.45);
+      const runLength = Math.max(0.8, depth - landing);
+      const halfHeight = height / 2;
+      const steps = Math.max(3, Math.round(halfHeight / 0.18));
+      const rise = halfHeight / steps;
+      const run = runLength / steps;
+      const upperSide = direction === 'left' ? -1 : 1;
+      const sideX = (flightWidth + gap) / 2;
+      const lowerX = -upperSide * sideX;
+      const upperX = upperSide * sideX;
+
+      // The lower flight climbs from the front to the landing at the back.
+      for (let i = 0; i < steps; i++) {
+        const z = depth / 2 - run * (i + 0.5);
+        g.add(at(box(flightWidth, rise * (i + 1) - 0.03, run, body, { r: 0 }), lowerX, 0, z));
+        g.add(at(box(flightWidth + 0.02, 0.03, run + 0.02, tread, { r: 0.008 }), lowerX, rise * (i + 1) - 0.03, z));
+      }
+      // The landing turns through 180°, then the upper flight climbs back towards the front.
+      const landingZ = -depth / 2 + landing / 2;
+      // The body stops at the underside of the wooden tread. Letting both reach
+      // halfHeight makes their top faces coplanar and flicker (z-fighting).
+      g.add(at(box(width, 0.13, landing, body, { r: 0 }), 0, halfHeight - 0.16, landingZ));
+      g.add(at(box(width + 0.02, 0.03, landing + 0.02, tread, { r: 0.008 }), 0, halfHeight - 0.03, landingZ));
+      for (let i = 0; i < steps; i++) {
+        const z = -depth / 2 + landing + run * (i + 0.5);
+        g.add(at(box(flightWidth, rise * (i + 1) - 0.03, run, body, { r: 0 }), upperX, halfHeight, z));
+        g.add(at(box(flightWidth + 0.02, 0.03, run + 0.02, tread, { r: 0.008 }), upperX, halfHeight + rise * (i + 1) - 0.03, z));
+      }
+
+      const railHeight = 0.9;
+      const slope = Math.atan2(halfHeight, runLength);
+      const railLength = Math.hypot(halfHeight, runLength);
+      const lowerOuterX = lowerX - upperSide * flightWidth / 2 + upperSide * 0.03;
+      const upperOuterX = upperX + upperSide * flightWidth / 2 - upperSide * 0.03;
+      const lowerBar = at(box(0.04, 0.04, railLength, rail, { r: 0.015 }), lowerOuterX, halfHeight / 2 + railHeight, landingZ + landing / 2 + runLength / 2);
+      lowerBar.rotation.x = slope;
+      const upperBar = at(box(0.04, 0.04, railLength, rail, { r: 0.015 }), upperOuterX, halfHeight + halfHeight / 2 + railHeight, landingZ + landing / 2 + runLength / 2);
+      upperBar.rotation.x = -slope;
+      const landingRail = at(box(width, 0.04, 0.04, rail, { r: 0.015 }), 0, halfHeight + railHeight, -depth / 2 + 0.03);
+      g.add(lowerBar, upperBar, landingRail);
+      for (const x of [-width / 2 + 0.03, width / 2 - 0.03]) {
+        g.add(at(box(0.025, railHeight, 0.025, rail, { r: 0 }), x, halfHeight, -depth / 2 + 0.03));
+      }
+      for (const t of [0.1, 0.5, 0.9]) {
+        const lowerZ = depth / 2 - runLength * t;
+        const upperZ = -depth / 2 + landing + runLength * t;
+        g.add(at(box(0.025, railHeight, 0.025, rail, { r: 0 }), lowerOuterX, halfHeight * t, lowerZ));
+        g.add(at(box(0.025, railHeight, 0.025, rail, { r: 0 }), upperOuterX, halfHeight + halfHeight * t, upperZ));
+      }
+      return g;
+    }
+
+    // A straight flight: step on at the front (+z) and climb towards the back.
+    const steps = Math.max(3, Math.round(height / 0.18));
+    const rise = height / steps;
+    const run = depth / steps;
+    const body = mat('#d9d4cb', { rough: 0.9 });
+    const tread = mat(WOOD, { rough: 0.6 });
+    const g = new THREE.Group();
+    for (let i = 0; i < steps; i++) {
+      const z = depth / 2 - run * (i + 0.5);
+      g.add(at(box(width, rise * i + rise - 0.03, run, body, { r: 0 }), 0, 0, z));
+      g.add(at(box(width + 0.02, 0.03, run + 0.02, tread, { r: 0.008 }), 0, rise * (i + 1) - 0.03, z));
+    }
+    // A handrail along the open side.
+    const rail = mat(BLACK, { rough: 0.5 });
+    const slope = Math.atan2(height, depth);
+    const length = Math.hypot(height, depth);
+    const bar = at(box(0.04, 0.04, length, rail, { r: 0.015 }), width / 2 - 0.03, height / 2 + 0.9, 0);
+    bar.rotation.x = slope;
+    g.add(bar);
+    for (const t of [0.1, 0.5, 0.9]) {
+      g.add(at(box(0.025, 0.9, 0.025, rail, { r: 0 }), width / 2 - 0.03, height * t, depth / 2 - depth * t));
+    }
+    return g;
+  },
 };
 
 export const FURNITURE_TYPES = Object.keys(builders);
@@ -338,16 +451,18 @@ export function footprint(item) {
     case 'island': return [w || 2, 1.1];
     case 'kitchen': return [w || 3, 0.62];
     case 'fridge': return [0.7, 0.68];
-    case 'bed': return [(w || 1.6) + 0.1, 2.14];
+    case 'bed': return [(w || 1.6) + 0.1, (item.depth || 2.1) + 0.04];
     case 'nightstand': return [0.46, 0.4];
     case 'dresser': return [w || 1.3, 0.45];
     case 'plant': return [0.45, 0.45];
     case 'vanity': return [w || 1, 0.5];
     case 'bathtub': return [1.7, 0.78];
+    case 'shower': return [w || 0.9, item.depth || 0.9];
     case 'toilet': return [0.4, 0.66];
     case 'desk': return [w || 1.4, 0.65];
     case 'wardrobe': return [w || 1.6, 0.6];
     case 'bookshelf': return [w || 1, 0.32];
+    case 'stairs': return [w || (item.style === 'double' ? 2.2 : 1), item.depth || 2.8];
     default: return [0.6, 0.6];
   }
 }

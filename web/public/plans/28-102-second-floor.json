@@ -1,0 +1,87 @@
+{
+  "version": 1,
+  "name": "28-102 二楼",
+  "wallHeight": 2.7,
+  "interiorWallHeight": 2.7,
+  "camera": { "azimuth": 32, "elevation": 52 },
+  "outdoorTemp": 24,
+
+  "levels": [
+    { "id": "upper", "name": "二楼" }
+  ],
+
+  "rooms": [
+    { "id": "kids", "name": "儿童房套房", "rect": [0.98, 0, 3.035, 3.16], "floor": "oak", "level": "upper" },
+    { "id": "kids_dry", "name": "儿童房干区", "rect": [4.015, 0, 1.27, 1.52], "floor": "tile", "level": "upper" },
+    { "id": "guest_wc", "name": "二楼次卫", "rect": [5.285, 1.02, 1.48, 0.8], "floor": "tile", "level": "upper" },
+    { "id": "guest_shower", "name": "次卫淋浴房", "rect": [5.285, 1.82, 1.48, 0.9], "floor": "tile", "level": "upper" },
+    { "id": "corridor", "name": "过道", "rect": [3.52, 3.16, 1.91, 2.64], "floor": "oak", "level": "upper" },
+    { "id": "stair_landing", "name": "楼梯到达区", "rect": [5.43, 3.16, 2.63, 2.64], "floor": "oak", "level": "upper" },
+    { "id": "master_shower", "name": "主卫淋浴", "rect": [0, 4.51, 0.93, 1.29], "floor": "tile", "level": "upper" },
+    { "id": "master_bath", "name": "主卧卫生间", "rect": [0.93, 4.51, 2.59, 1.29], "floor": "tile", "level": "upper" },
+    { "id": "master", "name": "主卧", "rect": [0, 5.8, 4.03, 4], "floor": "walnut", "level": "upper" },
+    { "id": "closet", "name": "衣帽间", "rect": [4.03, 5.8, 4.03, 4], "floor": "oak", "level": "upper" },
+    { "id": "balcony", "name": "生活阳台", "rect": [0, 9.8, 4.03, 1.35], "floor": "stone", "level": "upper" }
+  ],
+
+  "openings": [
+    { "type": "window", "from": [1.36, 0], "to": [2.92, 0], "level": "upper" },
+    { "type": "door", "from": [3.52, 3.16], "to": [4.015, 3.16], "level": "upper" },
+    { "type": "open", "from": [4.015, 0.42], "to": [4.015, 1.22], "level": "upper" },
+    { "type": "door", "from": [5.285, 1.1], "to": [5.285, 1.72], "level": "upper" },
+    { "type": "door", "from": [5.7, 1.82], "to": [6.4, 1.82], "level": "upper" },
+    { "type": "open", "from": [5.43, 4.06], "to": [5.43, 5.16], "level": "upper" },
+    { "type": "door", "from": [0.93, 4.8], "to": [0.93, 5.5], "level": "upper" },
+    { "type": "door", "from": [2.72, 5.8], "to": [3.49, 5.8], "level": "upper" },
+    { "type": "door", "from": [4.45, 5.8], "to": [5.25, 5.8], "level": "upper" },
+    { "type": "window", "from": [4.65, 9.8], "to": [7.45, 9.8], "level": "upper" },
+    { "type": "open", "from": [0.5, 9.8], "to": [3.6, 9.8], "level": "upper" }
+  ],
+
+  "furniture": [
+    { "type": "bed", "pos": [1.72, 1.58], "rot": 90, "width": 1.2, "color": "#86a9d2", "level": "upper" },
+    { "type": "nightstand", "pos": [1.12, 0.5], "rot": 90, "level": "upper" },
+    { "type": "desk", "pos": [2.9, 0.32], "rot": 180, "level": "upper" },
+    { "type": "wardrobe", "pos": [3.78, 1.3], "rot": -90, "width": 1.5, "level": "upper" },
+    { "type": "vanity", "pos": [4.62, 0.28], "rot": 180, "level": "upper" },
+    { "type": "toilet", "pos": [6.42, 1.25], "rot": -90, "level": "upper" },
+    { "type": "shower", "pos": [6.025, 2.27], "width": 0.9, "depth": 0.82, "level": "upper" },
+    { "type": "vanity", "pos": [1.85, 4.78], "rot": 180, "level": "upper" },
+    { "type": "toilet", "pos": [3.18, 5.05], "rot": -90, "level": "upper" },
+    { "type": "shower", "pos": [0.465, 5.155], "width": 0.86, "depth": 1.1, "level": "upper" },
+    { "type": "bed", "pos": [1.15, 7.8], "rot": 90, "width": 1.8, "color": "#d6d0c7", "level": "upper" },
+    { "type": "nightstand", "pos": [0.35, 6.55], "rot": 90, "level": "upper" },
+    { "type": "nightstand", "pos": [0.35, 9.05], "rot": 90, "level": "upper" },
+    { "type": "rug", "pos": [2.45, 7.8], "size": [1.4, 2.5], "color": "#76685b", "level": "upper" },
+    { "type": "wardrobe", "pos": [4.33, 7.8], "rot": 90, "width": 3.2, "level": "upper" },
+    { "type": "wardrobe", "pos": [7.75, 7.8], "rot": -90, "width": 3.2, "level": "upper" },
+    { "type": "plant", "pos": [0.45, 10.7], "level": "upper" }
+  ],
+
+  "lights": [
+    { "id": "kids.main", "name": "儿童房主灯", "room": "kids", "type": "ceiling", "pos": [2.5, 1.58], "capabilities": ["brightness", "temp", "color"] },
+    { "id": "kids_dry.main", "name": "干区灯", "room": "kids_dry", "type": "ceiling", "pos": [4.65, 0.76], "capabilities": ["brightness", "temp"] },
+    { "id": "guest_wc.main", "name": "次卫灯", "room": "guest_wc", "type": "ceiling", "pos": [6.03, 1.42], "capabilities": ["brightness"] },
+    { "id": "guest_shower.main", "name": "次卫淋浴灯", "room": "guest_shower", "type": "ceiling", "pos": [6.03, 2.27], "capabilities": ["brightness"] },
+    { "id": "corridor.spots", "name": "过道筒灯", "room": "corridor", "type": "spots", "pos": [4.48, 4.48], "capabilities": ["brightness"] },
+    { "id": "stair_landing.spots", "name": "楼梯灯", "room": "stair_landing", "type": "spots", "pos": [6.75, 4.48], "capabilities": ["brightness"] },
+    { "id": "master_bath.main", "name": "主卫灯", "room": "master_bath", "type": "ceiling", "pos": [2.23, 5.15], "capabilities": ["brightness", "temp"] },
+    { "id": "master.main", "name": "主卧主灯", "room": "master", "type": "ceiling", "pos": [2.02, 7.8], "capabilities": ["brightness", "temp"] },
+    { "id": "master.left", "name": "主卧床头灯", "room": "master", "type": "table", "pos": [0.35, 6.55] },
+    { "id": "master.right", "name": "主卧床尾灯", "room": "master", "type": "table", "pos": [0.35, 9.05] },
+    { "id": "closet.main", "name": "衣帽间主灯", "room": "closet", "type": "ceiling", "pos": [6.05, 7.8], "capabilities": ["brightness", "temp"] },
+    { "id": "balcony.main", "name": "生活阳台灯", "room": "balcony", "type": "ceiling", "pos": [2.02, 10.48], "capabilities": ["brightness"] }
+  ],
+
+  "acs": [
+    { "id": "kids.ac", "name": "儿童房空调", "room": "kids", "wall": "south", "pos": [2.45, 3.16], "y": 2.25 },
+    { "id": "master.ac", "name": "主卧空调", "room": "master", "wall": "north", "pos": [2.18, 5.8], "y": 2.25 },
+    { "id": "closet.ac", "name": "衣帽间空调", "room": "closet", "wall": "north", "pos": [6.35, 5.8], "y": 2.25 }
+  ],
+
+  "scenes": [
+    { "id": "bright", "name": "全屋明亮", "icon": "sun", "lights": { "*": { "on": true, "brightness": 1, "temp": 4200 } } },
+    { "id": "night", "name": "夜间", "icon": "moon", "lights": { "*": { "on": false }, "corridor.spots": { "on": true, "brightness": 0.15 }, "stair_landing.spots": { "on": true, "brightness": 0.12 }, "master.left": { "on": true } } },
+    { "id": "away", "name": "离家", "icon": "door", "lights": { "*": { "on": false } }, "acs": { "*": { "on": false } } }
+  ]
+}

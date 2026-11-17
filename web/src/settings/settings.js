@@ -295,7 +295,8 @@ function sample() {
     islandEnabled: true, islandRest: 'tab', islandWidth: 'compact', islandOpacity: 80, islandDelay: 220, islandPeek: true, islandHideInFullscreen: true, islandDisplay: '',
     displays: [{ id: '', name: 'Display 1 (main) · 1920×1080' }, { id: 'B', name: 'Display 2 · 2560×1440' }],
     widgetEnabled: false, widgetLocked: false,
-    plans: [{ id: 'home', name: 'Demo · Apartment' }, { id: 'studio', name: 'Demo · Studio' }], activePlan: 'home',
+    plans: [{ id: 'home', name: 'Demo · Apartment' }, { id: 'studio', name: 'Demo · Studio' },
+      { id: 'house', name: 'Demo · House on two floors' }], activePlan: 'home',
     services: { smartlife: { connected: false }, homeassistant: { connected: true, name: 'Home' }, hue: { connected: false } },
     paired: true, phones: ['iPhone'], computerName: 'DESKTOP-PC', aiLive: false, dataDirectory: '%APPDATA%\\HouseControl',
   };

@@ -28,6 +28,7 @@ internal sealed partial class App : ApplicationContext
     private IslandWindow? _island;
     private DesktopWidget? _widget;
     private PageWindow? _editor;
+    private bool _editorDirty;
     private PageWindow? _settingsWindow;
     /// <summary>Where a new editor window opens ("connections", "service:hue", …).</summary>
     private string? _editorSection;
@@ -239,6 +240,9 @@ internal sealed partial class App : ApplicationContext
                 break;
             case "close":
                 if (host == _panel.Host) _panel.Hide();
+                break;
+            case "editorDirty":
+                if (host == _editor?.Host) _editorDirty = message.Bool("dirty") == true;
                 break;
             case "selectPlan":
                 if (message.Str("plan") is { } plan) SelectPlan(plan);
@@ -504,8 +508,13 @@ internal sealed partial class App : ApplicationContext
         if (_editor is null)
         {
             var host = Attach(new WebHost("editor", BootPayload));
-            _editor = new PageWindow(host, "House Control — Edit Home", new Size(1240, 800), new Size(980, 640), _windows, "editor");
-            _editor.FormClosed += (_, _) => _editor = null;
+            var window = new PageWindow(host, "House Control — Edit Home", new Size(1240, 800), new Size(980, 640), _windows, "editor");
+            window.ConfirmClose = () => !_editorDirty || MessageBox.Show(window,
+                "You have unsaved changes. Close without saving?",
+                "Unsaved changes", MessageBoxButtons.YesNo, MessageBoxIcon.Warning,
+                MessageBoxDefaultButton.Button2) == DialogResult.Yes;
+            window.FormClosed += (_, _) => { _editor = null; _editorDirty = false; };
+            _editor = window;
             _ = Start(_editor.InitializeAsync(), "editor");
         }
         _editorSection = null;
@@ -553,6 +562,7 @@ internal sealed partial class App : ApplicationContext
         if (_plans.HasCustomPlan) plans.Add(new JsonObject { ["id"] = "custom", ["name"] = _plans.CustomPlanName ?? "My home" });
         plans.Add(new JsonObject { ["id"] = "home", ["name"] = "Demo · Apartment" });
         plans.Add(new JsonObject { ["id"] = "studio", ["name"] = "Demo · Studio" });
+        plans.Add(new JsonObject { ["id"] = "house", ["name"] = "Demo · House on two floors" });
         state["plans"] = plans;
         state["activePlan"] = _plans.ActivePlan;
         state["services"] = _hub.ServicesInfo;

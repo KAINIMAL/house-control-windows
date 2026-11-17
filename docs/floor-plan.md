@@ -110,8 +110,9 @@ Decoration only. Every piece has `type`, `pos` (`[x, z]` of its centre) and an o
 | `diningSet` | `width`, `chairs` |
 | `island` | `width`, `stools` |
 | `kitchen` | `width`, `upper` (wall cabinets, `true` by default) |
-| `bed` | `width`, `color` |
+| `bed` | `width`, `depth`, `color` |
 | `wardrobe`, `bookshelf` | `width`, `height` |
+| `shower` | `width`, `depth` |
 | `plant` | `height` |
 | `fridge`, `nightstand`, `bathtub`, `toilet` | — |
 

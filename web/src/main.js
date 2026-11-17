@@ -11,6 +11,7 @@ import { publishWidgets, runWidgetAction } from './widgets.js';
 const DEMO_PLANS = [
   { id: 'home', name: 'Demo · Apartment' },
   { id: 'studio', name: 'Demo · Studio' },
+  { id: 'house', name: 'Demo · House on two floors' },
 ];
 const STAGE_INSETS = [62, 50]; // header above, panel overlap below
 
@@ -75,7 +76,13 @@ async function boot() {
 
   try {
     world = createWorld(panel.canvas, config, store, {
+      level: savedLevel(config),
+      onLevel(id) {
+        panel.levelShown(id);
+        try { localStorage.setItem(levelKey(config), id); } catch { /* private mode */ }
+      },
       onHover: panel.showTooltip,
+      onView: panel.viewMoved,
       onPick(target) {
         if (!target) return;
         if (target.kind === 'light') { haptic('light'); store.toggleLight(target.id); }
@@ -89,8 +96,11 @@ async function boot() {
   }
 
   panel.attach(world);
-  // On a phone the header sits lower (status bar) but is closer to the model.
-  const applyInsets = () => (isPhone ? world.setInsets(50 + safeAreaTop(), 36) : world.setInsets(...STAGE_INSETS));
+  // The floor selector sits below the model, so multi-floor homes need a little more room.
+  const floorsInset = config.levels.length > 1 ? 44 : 0;
+  const applyInsets = () => (isPhone
+    ? world.setInsets(50 + safeAreaTop(), 36 + floorsInset)
+    : world.setInsets(STAGE_INSETS[0], STAGE_INSETS[1] + floorsInset));
   applyInsets();
   new ResizeObserver(() => (isPhone ? applyInsets() : world.resize())).observe(panel.canvas);
 
@@ -221,6 +231,12 @@ async function boot() {
   post('ready', { summary: store.summary() });
   if (isNative) publishWidgets(config, store);
   window.__house = { store, world, panel, config }; // handy in the dev console
+}
+
+// The floor a multi-floor home was last viewed on, kept separately for each home.
+const levelKey = (config) => `house.level:${config.name}`;
+function savedLevel(config) {
+  try { return localStorage.getItem(levelKey(config)); } catch { return null; }
 }
 
 // A still of the 3D model for an AI checking its own edit: a second, off-screen world

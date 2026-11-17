@@ -16,6 +16,7 @@ internal sealed class PageWindow : Form
     private readonly string? _placementKey;
     private readonly AppSettingsStore _store;
     public WebHost Host { get; }
+    public Func<bool>? ConfirmClose { get; set; }
 
     public PageWindow(WebHost host, string title, Size size, Size minimum, AppSettingsStore store, string? placementKey)
     {
@@ -64,6 +65,11 @@ internal sealed class PageWindow : Form
 
     protected override void OnFormClosing(FormClosingEventArgs e)
     {
+        if (e.CloseReason == CloseReason.UserClosing && ConfirmClose?.Invoke() == false)
+        {
+            e.Cancel = true;
+            return;
+        }
         if (_placementKey != null && WindowState == FormWindowState.Normal) _store.SetPlacement(_placementKey, Bounds);
         base.OnFormClosing(e);
     }

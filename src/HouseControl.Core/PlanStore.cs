@@ -10,13 +10,13 @@ namespace HouseControl.Core;
 /// </summary>
 public sealed class PlanStore
 {
-    public static readonly string[] Bundled = ["home", "studio"];
+    public static readonly string[] Bundled = ["home", "studio", "house"];
 
     public string Directory { get; }
     public string CustomPlanPath => Path.Combine(Directory, "plan.json");
     private string SettingsPath => Path.Combine(Directory, "settings.json");
 
-    /// <summary>"home" / "studio" for the bundled demos, or "custom" for plan.json.</summary>
+    /// <summary>A bundled demo id, or "custom" for plan.json.</summary>
     public string ActivePlan { get; private set; } = "home";
 
     public PlanStore(string? directory = null)
